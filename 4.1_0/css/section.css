@@ -1,0 +1,50 @@
+
+#aspnetForm {
+    visibility: hidden;
+}
+
+.subsection {
+    width: 100%; /* <- So the :hover will be consistant */
+}
+
+.subsection td {
+    padding-top: 0.23em;
+    padding-bottom: 0.23em;
+}
+
+.td-unit-indent {
+    width: 1em;
+}
+
+.td-unit-enum {
+    width: 2em;
+    color: rgb(100, 100, 100);
+    text-align: left;
+    vertical-align: top;
+}
+
+.td-unit-body {
+    overflow: hidden;
+    vertical-align: top;
+}
+
+.indenter-activated {
+    cursor: ew-resize !important;
+}
+
+.indenter-activated .td-unit-indent {
+    background-color:rgb(219, 230, 219);
+}
+
+@media not print {
+
+    tr:hover .unit-highlight {
+        background-color: rgba(255, 255, 0, 0.11);
+    }
+
+    .section-container {
+        padding-left: 0.5em;
+        padding-right: 0.5em;
+    }
+
+}
