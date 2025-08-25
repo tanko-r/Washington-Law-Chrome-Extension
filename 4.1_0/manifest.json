@@ -1,25 +1,42 @@
 {
-   "background": {
-      "persistent": false,
-      "scripts": [ "background scripts/backgroundJs.js" ]
-   },
-   "content_scripts": [ {
-      "css": [ "css/styles.css", "css/section.css" ],
-      "include_globs": [ "*://app?.leg.wa.gov/*" ],
-      "js": [ "js/subsection.js", "js/section.js", "js/unit.js", "js/tests.js", "js/changeFontSizeWidget.js", "js/warningWidget.js", "js/main.js" ],
-      "matches": [ "*://*.wa.gov/*" ],
-      "run_at": "document_end"
-   } ],
-   "description": "Indents and highlights Washington RCWs and WACs",
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgdrQXfICDgbreMgzFZI5cTvtJGQthmaJyxlHFvg4d1FWkWcfH0aHWO/Xqv+RDhEeCy2o5/DhkJ/IrcY1VJrVrSVDnes0+/Ao1SClNaNA2Cm433RndXFH000Gg81TpKR4P/rmzysQYeXfquiys34R0Zfk2mJsSlvJZcPfjyMsk5vDX05sKkJ39LsvsnL8zEx48fJ6MpT6ZNdpew0X9KA6tbPkPxUSN76+KTNnsmPUbzIIljOXtiuabzG3HQ37Nl26GxoQGPxSqM2OmS4szFJb4oF9fRByklW9zQ74peSgksc94a7iA5MZmPWzrVVpWB1rCb7WqCBD3BwISwoO9yjW7wIDAQAB",
    "manifest_version": 3,
    "name": "Washington Law Extension",
-   "page_action": {
+   "version": "4.1",
+   "description": "Indents and highlights Washington RCWs and WACs",
+   "permissions": [
+      "activeTab"
+   ],
+   "host_permissions": [
+      "*://*.wa.gov/*"
+   ],
+   "content_scripts": [
+      {
+         "matches": ["*://*.wa.gov/*"],
+         "include_globs": ["*://app?.leg.wa.gov/*"],
+         "js": [
+            "js/subsection.js",
+            "js/section.js", 
+            "js/unit.js",
+            "js/tests.js",
+            "js/changeFontSizeWidget.js",
+            "js/warningWidget.js",
+            "js/main.js"
+         ],
+         "css": [
+            "css/styles.css",
+            "css/section.css"
+         ],
+         "run_at": "document_end"
+      }
+   ],
+   "background": {
+      "service_worker": "background scripts/backgroundJs.js"
+   },
+   "action": {
       "default_icon": "icons/icon19a.png",
       "default_popup": "popup/popup.html",
       "default_title": "Washington Law Extension"
    },
-   "permissions": [ "tabs" ],
-   "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "4.1"
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgdrQXfICDgbreMgzFZI5cTvtJGQthmaJyxlHFvg4d1FWkWcfH0aHWO/Xqv+RDhEeCy2o5/DhkJ/IrcY1VJrVrSVDnes0+/Ao1SClNaNA2Cm433RndXFH000Gg81TpKR4P/rmzysQYeXfquiys34R0Zfk2mJsSlvJZcPfjyMsk5vDX05sKkJ39LsvsnL8zEx48fJ6MpT6ZNdpew0X9KA6tbPkPxUSN76+KTNnsmPUbzIIljOXtiuabzG3HQ37Nl26GxoQGPxSqM2OmS4szFJb4oF9fRByklW9zQ74peSgksc94a7iA5MZmPWzrVVpWB1rCb7WqCBD3BwISwoO9yjW7wIDAQAB",
+   "update_url": "https://clients2.google.com/service/update2/crx"
 }

@@ -3,13 +3,8 @@ var checkBox_lineHighlight = document.getElementById('check_box_lineHighlight');
 
 // Listen for the change event on the checkbox.
 checkBox_extEnable.addEventListener('change', function() {
-
-    // Update the background page localStorage.
-    chrome.runtime.getBackgroundPage(function (arg_win) {
-
-      arg_win.updateLocalStorage('isDisabled', !this.checked); // Checked === enabled
-
-    }.bind(this));
+    // Update storage directly
+    chrome.storage.local.set({'isDisabled': (!this.checked).toString()});
 
     reloadPage();
 
@@ -17,43 +12,29 @@ checkBox_extEnable.addEventListener('change', function() {
 });
 
 checkBox_lineHighlight.addEventListener('change', function() {
-
-    // Update the background page localStorage.
-    chrome.runtime.getBackgroundPage(function (arg_win) {
-
-      arg_win.updateLocalStorage('isDisabled_lineHighlight', !this.checked); // Checked === enabled
-
-    }.bind(this));
+    // Update storage directly
+    chrome.storage.local.set({'isDisabled_lineHighlight': (!this.checked).toString()});
 
     reloadPage();
 
     closePopUp();
 });
 
-chrome.runtime.getBackgroundPage(function (arg_win) {
-
+// Get storage values and set checkbox states
+chrome.storage.local.get(['isDisabled', 'isDisabled_lineHighlight'], function(result) {
   // Set the checkbox state, either checked or unchecked.
-
-  if (!arg_win.getLocalStorage('isDisabled') || arg_win.getLocalStorage('isDisabled') === 'false') {
-
+  if (!result.isDisabled || result.isDisabled === 'false') {
     checkBox_extEnable.checked = true;
-
   } else {
-
     checkBox_extEnable.checked = false;
-
     checkBox_lineHighlight.disabled = true; // Disable the other checkbox.
   }
 
-  if (!arg_win.getLocalStorage('isDisabled_lineHighlight') || arg_win.getLocalStorage('isDisabled_lineHighlight') === 'false') {
-
+  if (!result.isDisabled_lineHighlight || result.isDisabled_lineHighlight === 'false') {
     checkBox_lineHighlight.checked = true;
-
   } else {
-
     checkBox_lineHighlight.checked = false;
   }
-
 });
 
 function reloadPage(){
