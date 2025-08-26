@@ -364,11 +364,13 @@ DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches) {
         span.className = this.highlightClass;
         span.textContent = match.fullMatch;
         span.setAttribute('data-term', normalizedTerm);
-        span.setAttribute('title', ''); // Prevent default browser tooltip
         
         if (termData) {
-            // Store definition data for tooltip
-            span.setAttribute('data-definition', termData.definition || `Definition of "${match.term}"`);
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = this.tooltipClass;
+            tooltip.textContent = termData.definition || `Definition of "${match.term}"`;
+            span.appendChild(tooltip);
             
             // Track occurrence
             termData.occurrences.push({
@@ -397,12 +399,6 @@ DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches) {
 DefinedTerms.prototype.addEventListeners = function() {
     console.log('Adding event listeners for tooltips');
     
-    // Create a single tooltip element that we'll reuse
-    this.tooltipElement = document.createElement('div');
-    this.tooltipElement.className = this.tooltipClass;
-    this.tooltipElement.style.display = 'none';
-    document.body.appendChild(this.tooltipElement);
-    
     document.addEventListener('mouseover', (e) => {
         if (e.target.classList.contains(this.highlightClass)) {
             this.showTooltip(e.target, e);
@@ -414,41 +410,16 @@ DefinedTerms.prototype.addEventListeners = function() {
             this.hideTooltip(e.target);
         }
     });
-    
-    // Also handle mouse movement for better positioning
-    document.addEventListener('mousemove', (e) => {
-        if (e.target.classList.contains(this.highlightClass) && 
-            this.tooltipElement.style.display === 'block') {
-            this.positionTooltip(e.target, e);
-        }
-    });
 };
 
 /**
  * Shows tooltip
  */
 DefinedTerms.prototype.showTooltip = function(element, event) {
-    const definition = element.getAttribute('data-definition');
-    if (!definition || !this.tooltipElement) {
-        console.log('No definition found for element:', element);
-        return;
-    }
+    const tooltip = element.querySelector(`.${this.tooltipClass}`);
+    if (!tooltip) return;
     
-    console.log('Showing tooltip with definition:', definition);
-    
-    this.tooltipElement.textContent = definition;
-    this.tooltipElement.style.display = 'block';
-    
-    this.positionTooltip(element, event);
-};
-
-/**
- * Positions tooltip relative to element
- */
-DefinedTerms.prototype.positionTooltip = function(element, event) {
-    if (!this.tooltipElement || this.tooltipElement.style.display === 'none') return;
-    
-    const tooltip = this.tooltipElement;
+    tooltip.style.display = 'block';
     
     // Position tooltip
     const rect = element.getBoundingClientRect();
@@ -459,23 +430,12 @@ DefinedTerms.prototype.positionTooltip = function(element, event) {
     let top = rect.bottom + scrollTop + 5;
     
     // Adjust if tooltip goes off screen
-    // Force a layout to get accurate dimensions
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = top + 'px';
-    
     const tooltipRect = tooltip.getBoundingClientRect();
-    
-    // Adjust horizontal position if off-screen
-    if (tooltipRect.right > window.innerWidth - 10) {
+    if (left + tooltipRect.width > window.innerWidth - 10) {
         left = window.innerWidth - tooltipRect.width - 10;
     }
     if (left < 10) {
         left = 10;
-    }
-    
-    // Adjust vertical position if off-screen
-    if (tooltipRect.bottom > window.innerHeight - 10) {
-        top = rect.top + scrollTop - tooltipRect.height - 5;
     }
     
     tooltip.style.left = left + 'px';
@@ -486,9 +446,9 @@ DefinedTerms.prototype.positionTooltip = function(element, event) {
  * Hides tooltip
  */
 DefinedTerms.prototype.hideTooltip = function(element) {
-    if (this.tooltipElement) {
-        console.log('Hiding tooltip');
-        this.tooltipElement.style.display = 'none';
+    const tooltip = element.querySelector(`.${this.tooltipClass}`);
+    if (tooltip) {
+        tooltip.style.display = 'none';
     }
 };
 
