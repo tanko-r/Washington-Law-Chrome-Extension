@@ -42,27 +42,30 @@ DefinedTerms.prototype.addStyles = function() {
         }
         
         .${this.tooltipClass} {
-            position: absolute;
+            position: fixed;
             background: #333;
             color: white;
             padding: 8px 12px;
             border-radius: 4px;
             font-size: 12px;
             max-width: 300px;
-            z-index: 10000;
+            z-index: 999999;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             display: none;
             line-height: 1.4;
+            pointer-events: none;
+            white-space: normal;
+            word-wrap: break-word;
         }
         
         .${this.tooltipClass}:before {
             content: '';
             position: absolute;
-            top: -5px;
+            bottom: 100%;
             left: 10px;
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
-            border-bottom: 5px solid #333;
+            border-top: 5px solid #333;
         }
         
         @media print {
@@ -341,16 +344,28 @@ DefinedTerms.prototype.showTooltip = function(element, event) {
     if (tooltip) {
         tooltip.style.display = 'block';
         
-        // Position tooltip
+        // Position tooltip using fixed positioning
         const rect = element.getBoundingClientRect();
-        tooltip.style.left = '0px';
-        tooltip.style.top = (element.offsetHeight + 5) + 'px';
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
         
-        // Adjust if tooltip goes off screen
+        // Position below the element
+        tooltip.style.left = (rect.left + scrollLeft) + 'px';
+        tooltip.style.top = (rect.bottom + scrollTop + 5) + 'px';
+        
+        // Adjust if tooltip goes off screen horizontally
         setTimeout(() => {
             const tooltipRect = tooltip.getBoundingClientRect();
             if (tooltipRect.right > window.innerWidth) {
-                tooltip.style.left = (window.innerWidth - tooltipRect.width - rect.left - 10) + 'px';
+                tooltip.style.left = (window.innerWidth - tooltipRect.width - 10) + 'px';
+            }
+            if (tooltipRect.left < 0) {
+                tooltip.style.left = '10px';
+            }
+            
+            // Adjust if tooltip goes off screen vertically
+            if (tooltipRect.bottom > window.innerHeight) {
+                tooltip.style.top = (rect.top + scrollTop - tooltipRect.height - 5) + 'px';
             }
         }, 0);
     }
