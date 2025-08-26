@@ -146,7 +146,10 @@ function createNewSection(p_startElem) {
 }
 
 function setAspnetFormVisibility (p_visibility){
-    document.getElementById('aspnetForm').style.visibility = p_visibility;
+    const aspnetForm = document.getElementById('aspnetForm');
+    if (aspnetForm) {
+        aspnetForm.style.visibility = p_visibility;
+    }
 };
 
 /*

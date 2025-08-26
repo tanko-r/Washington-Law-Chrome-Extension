@@ -168,6 +168,7 @@ DefinedTerms.prototype.scanContentForTerms = function(contentElement) {
     const quotedTermPattern = /"([^"]{2,200})"/g;
     let match;
     let termCount = 0;
+    const definitionSources = new Set(); // Track where definitions are found
     
     while ((match = quotedTermPattern.exec(textContent)) !== null) {
         const term = match[1].trim();
@@ -179,22 +180,31 @@ DefinedTerms.prototype.scanContentForTerms = function(contentElement) {
             
             if (!this.definedTerms.has(normalizedTerm)) {
                 // Look for definition context
-                const definitionContext = this.findDefinitionContext(textContent, term);
+                const definitionResult = this.findDefinitionContext(textContent, term);
                 
                 const termData = {
                     originalTerm: term,
-                    definition: definitionContext,
+                    definition: definitionResult.definition,
                     sourceSection: 'current',
-                    occurrences: []
+                    occurrences: [],
+                    isDefinitionSource: definitionResult.isDefinitionSource
                 };
                 
                 this.definedTerms.set(normalizedTerm, termData);
                 termCount++;
                 
-                console.log(`Found term: "${term}" with definition: "${definitionContext.substring(0, 100)}..."`);
+                // Track definition sources to avoid highlighting them
+                if (definitionResult.isDefinitionSource) {
+                    definitionSources.add(definitionResult.sourcePosition);
+                }
+                
+                console.log(`Found term: "${term}" with definition: "${definitionResult.definition.substring(0, 100)}..."`);
             }
         }
     }
+    
+    // Store definition sources for later use
+    this.definitionSources = definitionSources;
     
     console.log(`Scan complete. Found ${termCount} unique terms.`);
 };
@@ -203,11 +213,17 @@ DefinedTerms.prototype.scanContentForTerms = function(contentElement) {
  * Finds definition context for a term
  */
 DefinedTerms.prototype.findDefinitionContext = function(fullText, term) {
+    let isDefinitionSource = false;
+    let sourcePosition = -1;
+    
     // Look for the quoted term followed by definition patterns
     const termPattern = new RegExp(`"${this.escapeRegex(term)}"\\s*([^"]*?)(?:means?|is defined as|shall mean)\\s*([^.]*(?:\\.[^.]*){0,2}\\.)`, 'gi');
     let match = termPattern.exec(fullText);
     
     if (match) {
+        isDefinitionSource = true;
+        sourcePosition = match.index;
+        
         // Extract the definition part (after "means" etc.)
         let definition = match[2] || '';
         
@@ -215,7 +231,11 @@ DefinedTerms.prototype.findDefinitionContext = function(fullText, term) {
         definition = definition.replace(/\s+/g, ' ').trim();
         
         if (definition.length > 10) {
-            return `"${term}" means ${definition}`;
+            return {
+                definition: `"${term}" means ${definition}`,
+                isDefinitionSource: isDefinitionSource,
+                sourcePosition: sourcePosition
+            };
         }
     }
     
@@ -226,12 +246,20 @@ DefinedTerms.prototype.findDefinitionContext = function(fullText, term) {
     if (fallbackMatch && fallbackMatch[1]) {
         let context = fallbackMatch[1].trim();
         if (context.length > 20) {
-            return `"${term}": ${context}.`;
+            return {
+                definition: `"${term}": ${context}.`,
+                isDefinitionSource: false,
+                sourcePosition: -1
+            };
         }
     }
     
     // Final fallback
-    return `Defined term: "${term}"`;
+    return {
+        definition: `Defined term: "${term}"`,
+        isDefinitionSource: false,
+        sourcePosition: -1
+    };
 };
 
 /**
@@ -320,6 +348,13 @@ DefinedTerms.prototype.highlightInElement = function(element, pattern) {
         pattern.lastIndex = 0;
         
         while ((match = pattern.exec(text)) !== null) {
+            const matchStart = textNode.parentNode.textContent.indexOf(text) + match.index;
+            
+            // Skip if this is a definition source location
+            if (this.definitionSources && this.definitionSources.has(matchStart)) {
+                continue;
+            }
+            
             matches.push({
                 term: match[1],
                 start: match.index,
