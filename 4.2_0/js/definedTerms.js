@@ -150,8 +150,6 @@ DefinedTerms.prototype.addDefinedTerm = function(term, definitionNode, matchInde
             definitionContext = `Defined term: "${term}"`;
         }
         
-        let definitionContext = '';
-        
         this.definedTerms.set(normalizedTerm, {
             originalTerm: term,
             definition: definitionContext,
