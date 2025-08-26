@@ -203,24 +203,34 @@ DefinedTerms.prototype.scanContentForTerms = function(contentElement) {
  * Finds definition context for a term
  */
 DefinedTerms.prototype.findDefinitionContext = function(fullText, term) {
-    const termPattern = new RegExp(`"${this.escapeRegex(term)}"`, 'gi');
-    const match = termPattern.exec(fullText);
+    // Look for the quoted term followed by definition patterns
+    const termPattern = new RegExp(`"${this.escapeRegex(term)}"\\s*([^"]*?)(?:means?|is defined as|shall mean)\\s*([^.]*(?:\\.[^.]*){0,2}\\.)`, 'gi');
+    let match = termPattern.exec(fullText);
     
     if (match) {
-        // Get surrounding context (500 characters)
-        const start = Math.max(0, match.index - 100);
-        const end = Math.min(fullText.length, match.index + 400);
-        let context = fullText.substring(start, end);
+        // Extract the definition part (after "means" etc.)
+        let definition = match[2] || '';
         
-        // Clean up context
-        context = context.replace(/\s+/g, ' ').trim();
+        // Clean up the definition
+        definition = definition.replace(/\s+/g, ' ').trim();
         
-        // If it contains definition keywords, it's likely a definition
-        if (/\bmeans?\b|\bis defined as\b|\bshall mean\b/i.test(context)) {
-            return context;
+        if (definition.length > 10) {
+            return `"${term}" means ${definition}`;
         }
     }
     
+    // Fallback: try to find any text after the quoted term up to the next sentence
+    const fallbackPattern = new RegExp(`"${this.escapeRegex(term)}"\\s*([^"]*?)([.!?](?:\\s|$))`, 'gi');
+    const fallbackMatch = fallbackPattern.exec(fullText);
+    
+    if (fallbackMatch && fallbackMatch[1]) {
+        let context = fallbackMatch[1].trim();
+        if (context.length > 20) {
+            return `"${term}": ${context}.`;
+        }
+    }
+    
+    // Final fallback
     return `Defined term: "${term}"`;
 };
 
