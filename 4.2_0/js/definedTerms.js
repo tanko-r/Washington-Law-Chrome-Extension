@@ -12,75 +12,78 @@ function DefinedTerms() {
     this.tooltipClass = 'defined-term-tooltip';
     this.currentChapter = null;
     this.isScanning = false;
+    
+    console.log('DefinedTerms initialized');
 }
 
 DefinedTerms.prototype.initialize = function() {
-    this.loadSettings();
-    this.addStyles();
-    this.detectChapterContext();
-    this.scanForDefinedTerms();
-    this.highlightTerms();
-    this.addEventListeners();
+    console.log('DefinedTerms.initialize() called');
+    
+    this.loadSettings(() => {
+        if (this.isEnabled) {
+            this.addStyles();
+            this.detectChapterContext();
+            this.scanForDefinedTerms();
+            this.addEventListeners();
+        }
+    });
 };
 
-DefinedTerms.prototype.loadSettings = function() {
+DefinedTerms.prototype.loadSettings = function(callback) {
     chrome.runtime.sendMessage({key: 'isDisabled_definedTerms', localStorage: 'get'}, (response) => {
         this.isEnabled = response.isDisabled_definedTerms !== 'true';
+        console.log('DefinedTerms enabled:', this.isEnabled);
+        if (callback) callback();
     });
 };
 
 DefinedTerms.prototype.addStyles = function() {
+    console.log('Adding styles for defined terms');
+    
     const style = document.createElement('style');
     style.innerHTML = `
         .${this.highlightClass} {
-            background-color: rgba(255, 255, 0, 0.2);
-            border-bottom: 1px dotted #666;
-            cursor: help;
-            position: relative;
+            background-color: rgba(255, 255, 0, 0.3) !important;
+            border-bottom: 2px dotted #666 !important;
+            cursor: help !important;
+            position: relative !important;
         }
         
         .${this.definitionClass} {
-            background-color: rgba(0, 255, 0, 0.15);
-            border: 1px solid rgba(0, 128, 0, 0.3);
-            font-weight: bold;
+            background-color: rgba(0, 255, 0, 0.2) !important;
+            border: 2px solid rgba(0, 128, 0, 0.5) !important;
+            font-weight: bold !important;
         }
         
         .${this.tooltipClass} {
-            position: fixed;
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            max-width: 350px;
-            z-index: 999999;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            display: none;
-            line-height: 1.4;
-            pointer-events: none;
-            white-space: normal;
-            word-wrap: break-word;
+            position: fixed !important;
+            background: #333 !important;
+            color: white !important;
+            padding: 8px 12px !important;
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            max-width: 350px !important;
+            z-index: 999999 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+            display: none !important;
+            line-height: 1.4 !important;
+            pointer-events: none !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
         }
         
         .${this.tooltipClass}::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: 10px;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 5px solid #333;
+            content: '' !important;
+            position: absolute !important;
+            top: -5px !important;
+            left: 10px !important;
+            border-left: 5px solid transparent !important;
+            border-right: 5px solid transparent !important;
+            border-bottom: 5px solid #333 !important;
         }
         
         .chapter-term-tooltip {
-            border-left: 3px solid #007acc;
-        }
-        
-        .chapter-term-tooltip::after {
-            content: ' (Chapter Definition)';
-            font-size: 10px;
-            opacity: 0.8;
-            font-style: italic;
+            border-left: 3px solid #007acc !important;
         }
         
         @media print {
@@ -101,6 +104,7 @@ DefinedTerms.prototype.addStyles = function() {
  */
 DefinedTerms.prototype.detectChapterContext = function() {
     const url = window.location.href;
+    console.log('Detecting chapter context from URL:', url);
     
     // Extract chapter from URL patterns like:
     // http://app.leg.wa.gov/RCW/default.aspx?cite=64.90&full=true (full chapter)
@@ -120,270 +124,150 @@ DefinedTerms.prototype.detectChapterContext = function() {
  * Main scanning function that handles both single sections and full chapters
  */
 DefinedTerms.prototype.scanForDefinedTerms = function() {
-    if (!this.isEnabled || this.isScanning) return;
+    if (!this.isEnabled || this.isScanning) {
+        console.log('Skipping scan - enabled:', this.isEnabled, 'scanning:', this.isScanning);
+        return;
+    }
     
+    console.log('Starting scan for defined terms');
     this.isScanning = true;
     
     try {
-        if (this.isFullChapter) {
-            // For full chapters, scan all sections for definitions
-            this.scanFullChapter();
-        } else {
-            // For single sections, scan current section + attempt to load chapter definitions
-            this.scanCurrentSection();
-            this.loadChapterDefinitions();
+        const contentDiv = document.getElementById('divContent');
+        if (!contentDiv) {
+            console.log('No divContent found');
+            return;
         }
+        
+        // Simple approach: scan the current page content for all quoted terms
+        this.scanContentForTerms(contentDiv);
+        
+        // If we found terms, highlight them
+        if (this.definedTerms.size > 0) {
+            console.log(`Found ${this.definedTerms.size} defined terms, highlighting...`);
+            this.highlightTerms();
+        } else {
+            console.log('No defined terms found');
+        }
+        
     } finally {
         this.isScanning = false;
     }
 };
 
 /**
- * Scans the entire chapter when viewing full chapter mode
+ * Scans content for all quoted terms
  */
-DefinedTerms.prototype.scanFullChapter = function() {
-    const contentDiv = document.getElementById('divContent');
-    if (!contentDiv) return;
+DefinedTerms.prototype.scanContentForTerms = function(contentElement) {
+    console.log('Scanning content for terms...');
     
-    // Find all section headers to identify individual sections
-    const sectionHeaders = contentDiv.querySelectorAll('a[href*="cite="]');
-    const sections = [];
+    const textContent = contentElement.textContent || contentElement.innerText || '';
+    console.log('Content length:', textContent.length);
     
-    // Group content by sections
-    sectionHeaders.forEach((header, index) => {
-        const sectionNumber = this.extractSectionNumber(header.href);
-        if (sectionNumber) {
-            const nextHeader = sectionHeaders[index + 1];
-            const sectionContent = this.getSectionContent(header, nextHeader);
-            sections.push({
-                number: sectionNumber,
-                content: sectionContent,
-                element: sectionContent
-            });
-        }
-    });
-    
-    // Scan each section for definitions
-    sections.forEach(section => {
-        this.scanSectionForDefinitions(section.content, section.number);
-    });
-    
-    console.log(`Scanned ${sections.length} sections, found ${this.chapterTerms.size} chapter-wide definitions`);
-};
-
-/**
- * Scans only the current section when viewing individual section
- */
-DefinedTerms.prototype.scanCurrentSection = function() {
-    const contentDiv = document.getElementById('divContent');
-    if (!contentDiv) return;
-    
-    const currentSection = this.getCurrentSectionNumber();
-    this.scanSectionForDefinitions(contentDiv, currentSection);
-};
-
-/**
- * Attempts to load definitions from other sections in the chapter via AJAX
- */
-DefinedTerms.prototype.loadChapterDefinitions = function() {
-    if (!this.currentChapter) return;
-    
-    // Construct URL for full chapter
-    const fullChapterUrl = `${window.location.origin}${window.location.pathname}?cite=${this.currentChapter}&full=true`;
-    
-    // Use fetch to load the full chapter content
-    fetch(fullChapterUrl)
-        .then(response => response.text())
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const contentDiv = doc.getElementById('divContent');
-            
-            if (contentDiv) {
-                this.scanChapterContent(contentDiv);
-                // Re-highlight terms with new chapter-wide definitions
-                this.highlightTerms();
-            }
-        })
-        .catch(error => {
-            console.log('Could not load full chapter for definitions:', error);
-        });
-};
-
-/**
- * Scans chapter content loaded via AJAX
- */
-DefinedTerms.prototype.scanChapterContent = function(contentDiv) {
-    const sectionHeaders = contentDiv.querySelectorAll('a[href*="cite="]');
-    
-    sectionHeaders.forEach((header, index) => {
-        const sectionNumber = this.extractSectionNumber(header.href);
-        if (sectionNumber) {
-            const nextHeader = sectionHeaders[index + 1];
-            const sectionContent = this.getSectionContent(header, nextHeader);
-            this.scanSectionForDefinitions(sectionContent, sectionNumber);
-        }
-    });
-    
-    console.log(`Loaded ${this.chapterTerms.size} definitions from full chapter`);
-};
-
-/**
- * Scans a specific section element for defined terms
- */
-DefinedTerms.prototype.scanSectionForDefinitions = function(sectionElement, sectionNumber) {
-    if (!sectionElement) return;
-    
-    const textNodes = this.getTextNodes(sectionElement);
-    
-    // Enhanced pattern to capture quoted terms with better context
+    // Find all quoted terms
     const quotedTermPattern = /"([^"]{2,200})"/g;
+    let match;
+    let termCount = 0;
     
-    textNodes.forEach(node => {
-        const text = node.textContent;
-        let match;
-        quotedTermPattern.lastIndex = 0;
+    while ((match = quotedTermPattern.exec(textContent)) !== null) {
+        const term = match[1].trim();
+        const wordCount = term.split(/\s+/).length;
         
-        while ((match = quotedTermPattern.exec(text)) !== null) {
-            const term = match[1].trim();
-            const wordCount = term.split(/\s+/).length;
+        // Only capture terms that are 6 words or fewer
+        if (wordCount <= 6 && term.length >= 2) {
+            const normalizedTerm = term.toLowerCase();
             
-            // Only capture terms that are 6 words or fewer
-            if (wordCount <= 6 && term.length >= 2) {
-                this.addDefinedTerm(term, node, match.index, sectionNumber);
+            if (!this.definedTerms.has(normalizedTerm)) {
+                // Look for definition context
+                const definitionContext = this.findDefinitionContext(textContent, term);
+                
+                const termData = {
+                    originalTerm: term,
+                    definition: definitionContext,
+                    sourceSection: 'current',
+                    occurrences: []
+                };
+                
+                this.definedTerms.set(normalizedTerm, termData);
+                termCount++;
+                
+                console.log(`Found term: "${term}" with definition: "${definitionContext.substring(0, 100)}..."`);
             }
         }
-    });
+    }
+    
+    console.log(`Scan complete. Found ${termCount} unique terms.`);
 };
 
 /**
- * Adds a defined term to the appropriate dictionary
+ * Finds definition context for a term
  */
-DefinedTerms.prototype.addDefinedTerm = function(term, definitionNode, matchIndex, sectionNumber) {
-    const normalizedTerm = term.toLowerCase();
-    const fullText = definitionNode.textContent;
+DefinedTerms.prototype.findDefinitionContext = function(fullText, term) {
+    const termPattern = new RegExp(`"${this.escapeRegex(term)}"`, 'gi');
+    const match = termPattern.exec(fullText);
     
-    // Check if this term has definition patterns
-    const definitionPatterns = [
-        new RegExp(`"${this.escapeRegex(term)}"\\s+(?:means?|shall mean)`, 'i'),
-        new RegExp(`"${this.escapeRegex(term)}"\\s+(?:is|are)\\s+defined\\s+as`, 'i'),
-        new RegExp(`for\\s+(?:the\\s+)?purposes?\\s+of\\s+(?:this\\s+)?(?:section|chapter|act|title),?\\s+"${this.escapeRegex(term)}"\\s+means?`, 'i'),
-        new RegExp(`as\\s+used\\s+in\\s+(?:this\\s+)?(?:section|chapter|act|title),?\\s+"${this.escapeRegex(term)}"\\s+means?`, 'i'),
-        new RegExp(`the\\s+terms?\\s+"${this.escapeRegex(term)}"\\s+means?`, 'i'),
-        new RegExp(`"${this.escapeRegex(term)}"\\s+has\\s+the\\s+meaning\\s+given`, 'i')
-    ];
-    
-    let definitionContext = '';
-    let hasDefinitionPattern = false;
-    
-    // Check for definition patterns
-    for (let pattern of definitionPatterns) {
-        if (pattern.test(fullText)) {
-            hasDefinitionPattern = true;
-            break;
-        }
-    }
-    
-    if (hasDefinitionPattern) {
-        // Extract definition context
-        definitionContext = this.extractDefinitionContext(fullText, term);
-    } else {
-        definitionContext = `Defined term: "${term}"`;
-    }
-    
-    const termData = {
-        originalTerm: term,
-        definition: definitionContext,
-        definitionNode: definitionNode,
-        hasDefinitionPattern: hasDefinitionPattern,
-        sourceSection: sectionNumber || 'current',
-        occurrences: []
-    };
-    
-    // Store in appropriate dictionary
-    if (hasDefinitionPattern) {
-        // Terms with definitions go to chapter-wide dictionary
-        this.chapterTerms.set(normalizedTerm, termData);
-    }
-    
-    // Also store in local dictionary for current context
-    if (!this.definedTerms.has(normalizedTerm)) {
-        this.definedTerms.set(normalizedTerm, termData);
-    }
-};
-
-/**
- * Extracts definition context from surrounding text
- */
-DefinedTerms.prototype.extractDefinitionContext = function(fullText, term) {
-    // Split into sentences and find the one containing the definition
-    const sentences = fullText.split(/[.!?]+/);
-    
-    for (let sentence of sentences) {
-        const lowerSentence = sentence.toLowerCase();
-        const lowerTerm = term.toLowerCase();
+    if (match) {
+        // Get surrounding context (500 characters)
+        const start = Math.max(0, match.index - 100);
+        const end = Math.min(fullText.length, match.index + 400);
+        let context = fullText.substring(start, end);
         
-        if (lowerSentence.includes(`"${lowerTerm}"`) && 
-            (lowerSentence.includes('means') || lowerSentence.includes('defined'))) {
-            
-            // Clean up the sentence
-            let cleanSentence = sentence.trim();
-            
-            // Remove leading numbers/letters that might be section markers
-            cleanSentence = cleanSentence.replace(/^\s*\([^)]*\)\s*/, '');
-            
-            // Limit length for tooltip display
-            if (cleanSentence.length > 300) {
-                const termIndex = cleanSentence.toLowerCase().indexOf(`"${lowerTerm}"`);
-                if (termIndex !== -1) {
-                    // Try to get context around the term
-                    const start = Math.max(0, termIndex - 50);
-                    const end = Math.min(cleanSentence.length, termIndex + 250);
-                    cleanSentence = '...' + cleanSentence.substring(start, end) + '...';
-                } else {
-                    cleanSentence = cleanSentence.substring(0, 300) + '...';
-                }
-            }
-            
-            return cleanSentence;
+        // Clean up context
+        context = context.replace(/\s+/g, ' ').trim();
+        
+        // If it contains definition keywords, it's likely a definition
+        if (/\bmeans?\b|\bis defined as\b|\bshall mean\b/i.test(context)) {
+            return context;
         }
     }
     
-    return `Definition of "${term}" (see source section)`;
+    return `Defined term: "${term}"`;
 };
 
 /**
  * Highlights all defined terms in the current document
  */
 DefinedTerms.prototype.highlightTerms = function() {
-    if (!this.isEnabled) return;
+    if (!this.isEnabled || this.definedTerms.size === 0) {
+        console.log('Skipping highlight - enabled:', this.isEnabled, 'terms:', this.definedTerms.size);
+        return;
+    }
+    
+    console.log('Starting to highlight terms...');
     
     const contentDiv = document.getElementById('divContent');
-    if (!contentDiv) return;
+    if (!contentDiv) {
+        console.log('No content div found for highlighting');
+        return;
+    }
     
-    // Combine local and chapter-wide terms
-    const allTerms = new Map([...this.definedTerms, ...this.chapterTerms]);
-    
-    if (allTerms.size === 0) return;
-    
-    // Create pattern for all terms
-    const terms = Array.from(allTerms.keys()).map(term => 
-        allTerms.get(term).originalTerm
+    // Get all terms to highlight
+    const terms = Array.from(this.definedTerms.keys()).map(key => 
+        this.definedTerms.get(key).originalTerm
     );
     
     // Sort by length (longest first) to avoid partial matches
     terms.sort((a, b) => b.length - a.length);
     
+    console.log('Terms to highlight:', terms);
+    
+    // Create pattern for all terms
     const escapedTerms = terms.map(term => this.escapeRegex(term));
     const pattern = new RegExp(`"(${escapedTerms.join('|')})"`, 'gi');
     
-    this.highlightInElement(contentDiv, pattern, allTerms);
+    console.log('Highlight pattern:', pattern);
+    
+    this.highlightInElement(contentDiv, pattern);
+    
+    console.log('Highlighting complete');
 };
 
 /**
  * Highlights terms within a specific element
  */
-DefinedTerms.prototype.highlightInElement = function(element, pattern, termMap) {
+DefinedTerms.prototype.highlightInElement = function(element, pattern) {
+    console.log('Highlighting in element...');
+    
     const walker = document.createTreeWalker(
         element,
         NodeFilter.SHOW_TEXT,
@@ -414,6 +298,10 @@ DefinedTerms.prototype.highlightInElement = function(element, pattern, termMap) 
         textNodes.push(node);
     }
     
+    console.log(`Found ${textNodes.length} text nodes to process`);
+    
+    let highlightCount = 0;
+    
     textNodes.forEach(textNode => {
         const text = textNode.textContent;
         const matches = [];
@@ -431,15 +319,19 @@ DefinedTerms.prototype.highlightInElement = function(element, pattern, termMap) 
         }
         
         if (matches.length > 0) {
-            this.replaceTextWithHighlights(textNode, matches, termMap);
+            console.log(`Found ${matches.length} matches in text node:`, matches);
+            this.replaceTextWithHighlights(textNode, matches);
+            highlightCount += matches.length;
         }
     });
+    
+    console.log(`Applied ${highlightCount} highlights`);
 };
 
 /**
  * Replaces text nodes with highlighted spans
  */
-DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches, termMap) {
+DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches) {
     const text = textNode.textContent;
     const parent = textNode.parentNode;
     const fragment = document.createDocumentFragment();
@@ -457,42 +349,24 @@ DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches, t
         // Create highlighted span
         const span = document.createElement('span');
         const normalizedTerm = match.term.toLowerCase();
-        const termData = termMap.get(normalizedTerm);
+        const termData = this.definedTerms.get(normalizedTerm);
+        
+        span.className = this.highlightClass;
+        span.textContent = match.fullMatch;
+        span.setAttribute('data-term', normalizedTerm);
         
         if (termData) {
-            const isDefinition = this.isDefinitionLocation(textNode, match);
-            const isChapterTerm = this.chapterTerms.has(normalizedTerm);
-            
-            span.className = isDefinition ? this.definitionClass : this.highlightClass;
-            span.textContent = match.fullMatch;
-            span.setAttribute('data-term', normalizedTerm);
-            span.setAttribute('data-is-chapter-term', isChapterTerm.toString());
-            
-            if (!isDefinition) {
-                // Create tooltip
-                const tooltip = document.createElement('div');
-                tooltip.className = this.tooltipClass;
-                if (isChapterTerm) {
-                    tooltip.classList.add('chapter-term-tooltip');
-                }
-                
-                let tooltipText = termData.definition || `Definition of "${match.term}"`;
-                if (isChapterTerm && termData.sourceSection && termData.sourceSection !== 'current') {
-                    tooltipText += ` (Defined in RCW ${this.currentChapter}.${termData.sourceSection})`;
-                }
-                
-                tooltip.textContent = tooltipText;
-                span.appendChild(tooltip);
-            }
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = this.tooltipClass;
+            tooltip.textContent = termData.definition || `Definition of "${match.term}"`;
+            span.appendChild(tooltip);
             
             // Track occurrence
             termData.occurrences.push({
                 element: span,
-                isDefinition: isDefinition
+                isDefinition: false
             });
-        } else {
-            span.className = this.highlightClass;
-            span.textContent = match.fullMatch;
         }
         
         fragment.appendChild(span);
@@ -510,65 +384,11 @@ DefinedTerms.prototype.replaceTextWithHighlights = function(textNode, matches, t
 };
 
 /**
- * Utility function to escape regex special characters
- */
-DefinedTerms.prototype.escapeRegex = function(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
-
-/**
- * Extracts section number from URL
- */
-DefinedTerms.prototype.extractSectionNumber = function(url) {
-    const match = url.match(/cite=\d+\.\d+\.(\d+)/);
-    return match ? match[1] : null;
-};
-
-/**
- * Gets the current section number from URL
- */
-DefinedTerms.prototype.getCurrentSectionNumber = function() {
-    const url = window.location.href;
-    return this.extractSectionNumber(url);
-};
-
-/**
- * Gets content between two section headers
- */
-DefinedTerms.prototype.getSectionContent = function(startHeader, endHeader) {
-    const content = document.createElement('div');
-    let current = startHeader.nextElementSibling;
-    
-    while (current && current !== endHeader) {
-        content.appendChild(current.cloneNode(true));
-        current = current.nextElementSibling;
-    }
-    
-    return content;
-};
-
-/**
- * Checks if a match location is where the term is being defined
- */
-DefinedTerms.prototype.isDefinitionLocation = function(textNode, match) {
-    const text = textNode.textContent.toLowerCase();
-    const beforeMatch = text.substring(0, match.start).slice(-100);
-    const afterMatch = text.substring(match.end, match.end + 100);
-    
-    const definitionIndicators = [
-        'means', 'shall mean', 'is defined as', 'are defined as',
-        'for purposes of', 'as used in', 'has the meaning'
-    ];
-    
-    return definitionIndicators.some(indicator => 
-        beforeMatch.includes(indicator) || afterMatch.includes(indicator)
-    );
-};
-
-/**
  * Event listeners for tooltip interactions
  */
 DefinedTerms.prototype.addEventListeners = function() {
+    console.log('Adding event listeners for tooltips');
+    
     document.addEventListener('mouseover', (e) => {
         if (e.target.classList.contains(this.highlightClass)) {
             this.showTooltip(e.target, e);
@@ -580,17 +400,10 @@ DefinedTerms.prototype.addEventListeners = function() {
             this.hideTooltip(e.target);
         }
     });
-    
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains(this.highlightClass) || 
-            e.target.classList.contains(this.definitionClass)) {
-            this.handleTermClick(e.target, e);
-        }
-    });
 };
 
 /**
- * Shows tooltip with improved positioning
+ * Shows tooltip
  */
 DefinedTerms.prototype.showTooltip = function(element, event) {
     const tooltip = element.querySelector(`.${this.tooltipClass}`);
@@ -598,42 +411,25 @@ DefinedTerms.prototype.showTooltip = function(element, event) {
     
     tooltip.style.display = 'block';
     
-    // Get element position
+    // Position tooltip
     const rect = element.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
     
-    // Initial positioning below the element
     let left = rect.left + scrollLeft;
     let top = rect.bottom + scrollTop + 5;
     
-    // Apply initial position to measure tooltip
+    // Adjust if tooltip goes off screen
+    const tooltipRect = tooltip.getBoundingClientRect();
+    if (left + tooltipRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipRect.width - 10;
+    }
+    if (left < 10) {
+        left = 10;
+    }
+    
     tooltip.style.left = left + 'px';
     tooltip.style.top = top + 'px';
-    
-    // Adjust positioning after tooltip is rendered
-    setTimeout(() => {
-        const tooltipRect = tooltip.getBoundingClientRect();
-        
-        // Adjust horizontal position if tooltip goes off screen
-        if (tooltipRect.right > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipRect.width - 10;
-            tooltip.style.left = left + 'px';
-        }
-        if (tooltipRect.left < 10) {
-            left = 10;
-            tooltip.style.left = left + 'px';
-        }
-        
-        // Adjust vertical position if tooltip goes off screen
-        if (tooltipRect.bottom > window.innerHeight - 10) {
-            top = rect.top + scrollTop - tooltipRect.height - 5;
-            tooltip.style.top = top + 'px';
-            
-            // Move arrow to bottom for upward tooltip
-            tooltip.style.setProperty('--arrow-position', 'bottom');
-        }
-    }, 0);
 };
 
 /**
@@ -647,72 +443,10 @@ DefinedTerms.prototype.hideTooltip = function(element) {
 };
 
 /**
- * Handles clicks on defined terms
+ * Utility function to escape regex special characters
  */
-DefinedTerms.prototype.handleTermClick = function(element, event) {
-    const term = element.getAttribute('data-term');
-    if (!term) return;
-    
-    // Check both local and chapter terms
-    const termData = this.definedTerms.get(term) || this.chapterTerms.get(term);
-    if (!termData) return;
-    
-    // Find and scroll to definition
-    const definitionOccurrence = termData.occurrences.find(occ => occ.isDefinition);
-    if (definitionOccurrence) {
-        definitionOccurrence.element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-        });
-        
-        // Highlight the definition briefly
-        const originalBg = definitionOccurrence.element.style.backgroundColor;
-        definitionOccurrence.element.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
-        setTimeout(() => {
-            definitionOccurrence.element.style.backgroundColor = originalBg;
-        }, 2000);
-    } else if (termData.sourceSection && termData.sourceSection !== 'current') {
-        // If definition is in another section, provide feedback
-        const message = `Definition is in RCW ${this.currentChapter}.${termData.sourceSection}`;
-        console.log(message);
-        
-        // Could implement navigation to definition section here
-        // window.location.href = `?cite=${this.currentChapter}.${termData.sourceSection}`;
-    }
-    
-    event.preventDefault();
-};
-
-/**
- * Gets all text nodes within an element
- */
-DefinedTerms.prototype.getTextNodes = function(element) {
-    const textNodes = [];
-    const walker = document.createTreeWalker(
-        element,
-        NodeFilter.SHOW_TEXT,
-        {
-            acceptNode: function(node) {
-                const parent = node.parentElement;
-                if (!parent) return NodeFilter.FILTER_REJECT;
-                
-                const tagName = parent.tagName.toLowerCase();
-                if (tagName === 'script' || tagName === 'style') {
-                    return NodeFilter.FILTER_REJECT;
-                }
-                
-                return node.textContent.trim().length > 0 ? 
-                    NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-            }
-        }
-    );
-    
-    let node;
-    while (node = walker.nextNode()) {
-        textNodes.push(node);
-    }
-    
-    return textNodes;
+DefinedTerms.prototype.escapeRegex = function(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
 /**
@@ -723,7 +457,6 @@ DefinedTerms.prototype.toggle = function(enabled) {
     
     if (enabled) {
         this.scanForDefinedTerms();
-        this.highlightTerms();
     } else {
         this.removeHighlights();
     }
@@ -753,6 +486,8 @@ window.definedTermsInstance = null;
  * Initialize the defined terms system
  */
 function initializeDefinedTerms() {
+    console.log('initializeDefinedTerms() called');
+    
     if (!window.definedTermsInstance) {
         window.definedTermsInstance = new DefinedTerms();
         window.definedTermsInstance.initialize();
