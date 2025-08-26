@@ -86,34 +86,23 @@ DefinedTerms.prototype.scanForDefinedTerms = function() {
     
     const textNodes = this.getTextNodes(contentDiv);
     
-    // Common definition patterns in legal documents
-    const definitionPatterns = [
-        // "Term" means/shall mean
-        /"([^"]+)"\s+(?:means?|shall mean)/gi,
-        // "Term" is defined as
-        /"([^"]+)"\s+(?:is|are)\s+defined\s+as/gi,
-        // For purposes of this section, "term" means
-        /for\s+(?:the\s+)?purposes?\s+of\s+(?:this\s+)?(?:section|chapter|act|title),?\s+"([^"]+)"\s+means?/gi,
-        // As used in this section, "term" means
-        /as\s+used\s+in\s+(?:this\s+)?(?:section|chapter|act|title),?\s+"([^"]+)"\s+means?/gi,
-        // The term "term" means
-        /the\s+terms?\s+"([^"]+)"\s+means?/gi,
-        // "Term" has the meaning given in
-        /"([^"]+)"\s+has\s+the\s+meaning\s+given/gi
-    ];
+    // Pattern to capture all quoted terms (up to 6 words)
+    const quotedTermPattern = /"([^"]{1,200})"/g; // Reasonable character limit for 6 words
     
     textNodes.forEach(node => {
         const text = node.textContent;
         
-        definitionPatterns.forEach(pattern => {
-            let match;
-            while ((match = pattern.exec(text)) !== null) {
-                const term = match[1].trim();
-                if (term.length > 2 && term.length < 100) { // Reasonable term length
-                    this.addDefinedTerm(term, node, match.index);
-                }
+        let match;
+        quotedTermPattern.lastIndex = 0; // Reset regex
+        while ((match = quotedTermPattern.exec(text)) !== null) {
+            const term = match[1].trim();
+            const wordCount = term.split(/\s+/).length;
+            
+            // Only capture terms that are 6 words or fewer and at least 2 characters
+            if (wordCount <= 6 && term.length >= 2 && term.length <= 100) {
+                this.addDefinedTerm(term, node, match.index);
             }
-        });
+        }
     });
 };
 
@@ -121,24 +110,53 @@ DefinedTerms.prototype.addDefinedTerm = function(term, definitionNode, matchInde
     const normalizedTerm = term.toLowerCase();
     
     if (!this.definedTerms.has(normalizedTerm)) {
-        // Extract definition context (sentence containing the definition)
+        // Extract definition context - look for definition patterns around the term
         const fullText = definitionNode.textContent;
-        const sentences = fullText.split(/[.!?]+/);
-        let definitionContext = '';
         
-        for (let sentence of sentences) {
-            if (sentence.toLowerCase().includes(term.toLowerCase()) && 
-                (sentence.toLowerCase().includes('means') || 
-                 sentence.toLowerCase().includes('defined'))) {
-                definitionContext = sentence.trim();
+        // Check if this term appears with definition patterns
+        const definitionPatterns = [
+            new RegExp(`"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+(?:means?|shall mean)`, 'i'),
+            new RegExp(`"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+(?:is|are)\\s+defined\\s+as`, 'i'),
+            new RegExp(`for\\s+(?:the\\s+)?purposes?\\s+of\\s+(?:this\\s+)?(?:section|chapter|act|title),?\\s+"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+means?`, 'i'),
+            new RegExp(`as\\s+used\\s+in\\s+(?:this\\s+)?(?:section|chapter|act|title),?\\s+"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+means?`, 'i'),
+            new RegExp(`the\\s+terms?\\s+"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+means?`, 'i'),
+            new RegExp(`"${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"\\s+has\\s+the\\s+meaning\\s+given`, 'i')
+        ];
+        
+        let definitionContext = '';
+        let hasDefinitionPattern = false;
+        
+        // Check if any definition pattern matches
+        for (let pattern of definitionPatterns) {
+            if (pattern.test(fullText)) {
+                hasDefinitionPattern = true;
                 break;
             }
         }
+        
+        if (hasDefinitionPattern) {
+            // Extract the sentence containing the definition
+            const sentences = fullText.split(/[.!?]+/);
+            for (let sentence of sentences) {
+                if (sentence.toLowerCase().includes(term.toLowerCase()) && 
+                    (sentence.toLowerCase().includes('means') || 
+                     sentence.toLowerCase().includes('defined'))) {
+                    definitionContext = sentence.trim();
+                    break;
+                }
+            }
+        } else {
+            // For terms without explicit definitions, use a generic message
+            definitionContext = `Defined term: "${term}"`;
+        }
+        
+        let definitionContext = '';
         
         this.definedTerms.set(normalizedTerm, {
             originalTerm: term,
             definition: definitionContext,
             definitionNode: definitionNode,
+            hasDefinitionPattern: hasDefinitionPattern,
             occurrences: []
         });
     }
