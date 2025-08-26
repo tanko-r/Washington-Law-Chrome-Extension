@@ -58,11 +58,20 @@ chrome.runtime.sendMessage({key: 'isDisabled_lineHighlight' , localStorage: 'get
 
 });
 
+chrome.runtime.sendMessage({key: 'isDisabled_definedTerms' , localStorage: 'get'}, function(response) {
+
+    if (response.isDisabled_definedTerms === 'true' && window.definedTermsInstance) {
+        window.definedTermsInstance.toggle(false);
+    }
+
+});
+
 function main() {
 
     findSections();
     warningWidget();
     changeFontSizeWidget();
+    initializeDefinedTerms();
 
     return 0;
 

@@ -19,6 +19,7 @@
             "js/section.js", 
             "js/unit.js",
             "js/tests.js",
+            "js/definedTerms.js",
             "js/changeFontSizeWidget.js",
             "js/warningWidget.js",
             "js/main.js"

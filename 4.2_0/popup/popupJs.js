@@ -1,5 +1,6 @@
 var checkBox_extEnable = document.getElementById('check_box_extEnable');
 var checkBox_lineHighlight = document.getElementById('check_box_lineHighlight');
+var checkBox_definedTerms = document.getElementById('check_box_definedTerms');
 
 // Listen for the change event on the checkbox.
 checkBox_extEnable.addEventListener('change', function() {
@@ -20,20 +21,36 @@ checkBox_lineHighlight.addEventListener('change', function() {
     closePopUp();
 });
 
+checkBox_definedTerms.addEventListener('change', function() {
+    // Update storage directly
+    chrome.storage.local.set({'isDisabled_definedTerms': (!this.checked).toString()});
+
+    reloadPage();
+
+    closePopUp();
+});
+
 // Get storage values and set checkbox states
-chrome.storage.local.get(['isDisabled', 'isDisabled_lineHighlight'], function(result) {
+chrome.storage.local.get(['isDisabled', 'isDisabled_lineHighlight', 'isDisabled_definedTerms'], function(result) {
   // Set the checkbox state, either checked or unchecked.
   if (!result.isDisabled || result.isDisabled === 'false') {
     checkBox_extEnable.checked = true;
   } else {
     checkBox_extEnable.checked = false;
     checkBox_lineHighlight.disabled = true; // Disable the other checkbox.
+    checkBox_definedTerms.disabled = true; // Disable the defined terms checkbox.
   }
 
   if (!result.isDisabled_lineHighlight || result.isDisabled_lineHighlight === 'false') {
     checkBox_lineHighlight.checked = true;
   } else {
     checkBox_lineHighlight.checked = false;
+  }
+
+  if (!result.isDisabled_definedTerms || result.isDisabled_definedTerms === 'false') {
+    checkBox_definedTerms.checked = true;
+  } else {
+    checkBox_definedTerms.checked = false;
   }
 });
 
