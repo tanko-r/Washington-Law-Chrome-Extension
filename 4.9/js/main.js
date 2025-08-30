@@ -1,4 +1,5 @@
 
+
 /*
 http://courts.wa.libguides.com/rcw
 
@@ -63,81 +64,17 @@ function main() {
     findSections();
     warningWidget();
     changeFontSizeWidget();
+    findAndHighlightDefinedTerms();
 
     return 0;
 
 }
 
-function findSections(){
-    var lawDivs = document.querySelectorAll('#divContent div');
-
-    for (var n = 0; n < lawDivs.length; ++n) {
-
-        if (!lawDivs[n].nextElementSibling) {
-
-            // The element was removed from the DOM when the new section was created.
-
-            continue;
-        }
-
-        if (/^\s*\([1aAiI]\)/.test(lawDivs[n].innerHTML)) { // The first "unit" should start with a (a) or (1).
-
-            createNewSection(lawDivs[n]);
-        }
-    }
-}
-
-function createNewSection(p_startElem) {
-    var container = null;
-    var unitsArray = [];
-    var section = null;
-    var unit = null;
-
-    unit = p_startElem;
-
-    unitsArray = [];
-
-    container = document.createElement('div');
-
-    unit.parentElement.insertBefore(container, unit);
-
-    while (unit) {
-
-        // Gobble up all the "units" from the start element until the end of the section is found.
-
-        if (unit.classList.contains('lawreference')) {
-
-            break; // Every law (as far as I can tell) has a .lawreference that marks the end of the section.
-        }
-
-        if (/^\s*\([\da-zA-Z]{0,8}\)/.test(unit.innerHTML)) {
-
-            unitsArray.push(new Unit(unit.innerHTML)); // An enumerated subsection. Example: (a) texttexttext.
-
-        } else {
-
-            unitsArray.push(new Unit(unit.outerHTML)); // Probably a paragraph or table.
-        }
-
-        if (unit.nextElementSibling) {
-
-            unit = unit.nextElementSibling;
-
-            unit.previousElementSibling.parentElement.removeChild(unit.previousElementSibling);
-
-        } else {
-
-            unit.parentElement.removeChild(unit);
-
-            break; // Break if this "unit" has no more siblings.
-        }
-    }
-
-    section = new Section({ container: container, unitsArray: unitsArray });
-}
-
 function setAspnetFormVisibility (p_visibility){
-    document.getElementById('aspnetForm').style.visibility = p_visibility;
+    var aspnetForm = document.getElementById('aspnetForm');
+    if (aspnetForm) {
+        aspnetForm.style.visibility = p_visibility;
+    }
 };
 
 /*
