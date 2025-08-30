@@ -1,7 +1,7 @@
 {
    "manifest_version": 3,
    "name": "Washington Law Extension",
-   "version": "4.2",
+   "version": "4.9",
    "description": "Indents and highlights Washington RCWs and WACs",
    "permissions": [
       "activeTab",
@@ -15,9 +15,8 @@
          "matches": ["*://*.wa.gov/*"],
          "include_globs": ["*://app?.leg.wa.gov/*"],
          "js": [
-            "js/subsection.js",
-            "js/section.js", 
-            "js/unit.js",
+            "js/indent.js",
+            "js/definitions.js",
             "js/tests.js",
             "js/changeFontSizeWidget.js",
             "js/warningWidget.js",

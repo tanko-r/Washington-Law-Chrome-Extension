@@ -1,4 +1,5 @@
 
+
 function changeFontSizeWidget() {
     var form = document.createElement('form');
     form.className = 'ui-input-text ui-body-inherit ui-corner-all ui-shadow-inset change-form-text-size';
@@ -42,7 +43,9 @@ function changeFontSizeWidget() {
             input.value = input.value.replace(/[^\d]/g,'') + '%';
         }
 
-        aspForm.style.fontSize = (number / 100) +'em';
+        if (aspForm) {
+            aspForm.style.fontSize = (number / 100) +'em';
+        }
 
         return false;
     });
