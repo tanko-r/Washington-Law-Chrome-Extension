@@ -1,8 +1,8 @@
 {
    "manifest_version": 3,
    "name": "Washington Law Extension",
-   "version": "4.9",
-   "description": "Indents and highlights Washington RCWs and WACs",
+   "version": "5.0",
+   "description": "Indents and highlights Washington RCWs and WACs and highlights defined terms",
    "permissions": [
       "activeTab",
       "storage"
