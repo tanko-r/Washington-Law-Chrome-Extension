@@ -37,6 +37,5 @@
       "default_popup": "popup/popup.html",
       "default_title": "Washington Law Extension"
    },
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgdrQXfICDgbreMgzFZI5cTvtJGQthmaJyxlHFvg4d1FWkWcfH0aHWO/Xqv+RDhEeCy2o5/DhkJ/IrcY1VJrVrSVDnes0+/Ao1SClNaNA2Cm433RndXFH000Gg81TpKR4P/rmzysQYeXfquiys34R0Zfk2mJsSlvJZcPfjyMsk5vDX05sKkJ39LsvsnL8zEx48fJ6MpT6ZNdpew0X9KA6tbPkPxUSN76+KTNnsmPUbzIIljOXtiuabzG3HQ37Nl26GxoQGPxSqM2OmS4szFJb4oF9fRByklW9zQ74peSgksc94a7iA5MZmPWzrVVpWB1rCb7WqCBD3BwISwoO9yjW7wIDAQAB",
    "update_url": "https://clients2.google.com/service/update2/crx"
 }
