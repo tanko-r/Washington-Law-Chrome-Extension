@@ -60,14 +60,16 @@ chrome.runtime.sendMessage({key: 'isDisabled_lineHighlight' , localStorage: 'get
 });
 
 function main() {
-
     findSections();
     warningWidget();
-    changeFontSizeWidget();
-    findAndHighlightDefinedTerms();
+
+    chrome.runtime.sendMessage({key: 'isDisabled_termHighlight' , localStorage: 'get'}, function(response) {
+        if (response.isDisabled_termHighlight !== 'true') {
+            findAndHighlightDefinedTerms();
+        }
+    });
 
     return 0;
-
 }
 
 function setAspnetFormVisibility (p_visibility){

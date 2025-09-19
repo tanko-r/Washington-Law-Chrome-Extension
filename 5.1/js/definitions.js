@@ -58,6 +58,7 @@ function showTooltip(targetElement, definition, sourceId, isFullChapter, fullCha
     tooltipElement.innerHTML = `
         <div class="defined-term-tooltip-content">${formattedDefinition}</div>
         ${linkHtml}
+        <div class="defined-term-tooltip-disclaimer">Definitions displayed may be inaccurate.  ALWAYS review the original law.</div>
     `;
 
     const rect = targetElement.getBoundingClientRect();
