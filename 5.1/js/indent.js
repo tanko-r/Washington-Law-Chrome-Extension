@@ -597,11 +597,12 @@ Section.prototype.findFirstLowerPreviousEnum = function(p_unitObj, p_lvl) {
 
 function findSections(p_rootNode){
     var rootNode = p_rootNode || document;
-    var lawDivs = rootNode.querySelectorAll('#divContent div');
+    // New layout uses #contentWrapper.section-page; legacy pages use #divContent.
+    var lawDivs = rootNode.querySelectorAll('#contentWrapper div, #divContent div');
 
     for (var n = 0; n < lawDivs.length; ++n) {
 
-        if (!lawDivs[n].nextElementSibling) {
+        if (!lawDivs[n].parentNode) {
 
             // The element was removed from the DOM when the new section was created.
 
@@ -613,6 +614,22 @@ function findSections(p_rootNode){
             createNewSection(lawDivs[n]);
         }
     }
+}
+
+function isSectionTerminator(el) {
+    if (!el) return true;
+    if (el.classList && el.classList.contains('lawreference')) return true; // legacy
+    if (el.querySelector && el.querySelector('h3')) return true; // "Notes:" / "Reviser's note:" headers
+    var style = el.getAttribute && (el.getAttribute('style') || '');
+    if (/margin-top\s*:\s*15pt/i.test(style)) return true; // history/citation block
+    if (/margin-top\s*:\s*0\.25in/i.test(style)) return true; // Notes header wrapper
+    var html = el.innerHTML || '';
+    // A unit either starts with a parenthetical marker or carries text-indent:0.5in.
+    if (!/^\s*\([\da-zA-Z]{0,8}\)/.test(html) &&
+        !/text-indent\s*:\s*0\.5in/i.test(style)) {
+        return true;
+    }
+    return false;
 }
 
 function createNewSection(p_startElem) {
@@ -634,9 +651,9 @@ function createNewSection(p_startElem) {
 
         // Gobble up all the "units" from the start element until the end of the section is found.
 
-        if (unit.classList.contains('lawreference')) {
+        if (isSectionTerminator(unit)) {
 
-            break; // Every law (as far as I can tell) has a .lawreference that marks the end of the section.
+            break; // End of the section: legacy .lawreference, history block, Notes header, or any non-unit sibling.
         }
 
         if (/^\s*\([\da-zA-Z]{0,8}\)/.test(unit.innerHTML)) {

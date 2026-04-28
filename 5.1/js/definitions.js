@@ -143,11 +143,15 @@ function getTermVariations(term) {
 }
 
 
+function getRcwContentRoot(doc) {
+    return doc.getElementById('contentWrapper') || doc.getElementById('divContent');
+}
+
 async function findAndHighlightDefinedTerms() {
     console.log("Washington Law Extension: Starting findAndHighlightDefinedTerms...");
-    const contentDiv = document.getElementById('divContent');
+    const contentDiv = getRcwContentRoot(document);
     if (!contentDiv) {
-        console.error("Washington Law Extension: Could not find #divContent element. Aborting.");
+        console.error("Washington Law Extension: Could not find #contentWrapper or #divContent element. Aborting.");
         return;
     }
     
@@ -179,13 +183,13 @@ async function findAndHighlightDefinedTerms() {
             // Run indentation logic on the in-memory document
             findSections(fetchedDoc);
 
-            const fetchedContentDiv = fetchedDoc.getElementById('divContent');
+            const fetchedContentDiv = getRcwContentRoot(fetchedDoc);
             if (fetchedContentDiv) {
                 console.log("Washington Law Extension: Finished indenting fetched content. Now finding definitions...");
                 findDefinitions(fetchedContentDiv, definedTerms);
                 console.log(`Washington Law Extension: Found ${definedTerms.size} terms from full chapter.`);
             } else {
-                 console.error("Washington Law Extension: #divContent not found in fetched HTML.");
+                 console.error("Washington Law Extension: #contentWrapper/#divContent not found in fetched HTML.");
             }
 
         } catch (error) {
