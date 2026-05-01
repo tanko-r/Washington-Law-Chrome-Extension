@@ -144,7 +144,17 @@ function getTermVariations(term) {
 
 
 function getRcwContentRoot(doc) {
-    return doc.getElementById('contentWrapper') || doc.getElementById('divContent');
+    const wrap = doc.getElementById('contentWrapper');
+    if (wrap) {
+        // On a chapter view (?cite=X.YZ&full=true), #contentWrapper holds only the
+        // TOC; the actual section content is rendered into #mainPage. Section pages
+        // keep their content inside #contentWrapper itself.
+        if (wrap.classList.contains('chapter-page')) {
+            return doc.getElementById('mainPage') || wrap;
+        }
+        return wrap;
+    }
+    return doc.getElementById('divContent');
 }
 
 async function findAndHighlightDefinedTerms() {

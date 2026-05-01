@@ -597,8 +597,20 @@ Section.prototype.findFirstLowerPreviousEnum = function(p_unitObj, p_lvl) {
 
 function findSections(p_rootNode){
     var rootNode = p_rootNode || document;
-    // New layout uses #contentWrapper.section-page; legacy pages use #divContent.
-    var lawDivs = rootNode.querySelectorAll('#contentWrapper div, #divContent div');
+    // New layout: #contentWrapper.section-page on a single-section view holds the
+    // body; on a chapter ?full=true view the TOC sits in #contentWrapper.chapter-page
+    // and the section bodies are rendered into #mainPage. Legacy pages use #divContent.
+    var contentRoot;
+    var wrap = rootNode.getElementById ? rootNode.getElementById('contentWrapper') : null;
+    if (wrap && wrap.classList && wrap.classList.contains('chapter-page')) {
+        contentRoot = rootNode.getElementById('mainPage') || wrap;
+    } else if (wrap) {
+        contentRoot = wrap;
+    } else {
+        contentRoot = rootNode.getElementById ? rootNode.getElementById('divContent') : null;
+    }
+    if (!contentRoot) return;
+    var lawDivs = contentRoot.querySelectorAll('div');
 
     for (var n = 0; n < lawDivs.length; ++n) {
 
