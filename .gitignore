@@ -1,2 +1,6 @@
 node_modules/
 .env
+
+# Chrome extension build artifacts (signing key MUST stay private)
+*.pem
+*.crx
